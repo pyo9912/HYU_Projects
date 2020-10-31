@@ -55,7 +55,7 @@ pagenum_t get_neighbor_number(int table_id, pagenum_t n);
 pagenum_t coalesce_nodes(int table_id, pagenum_t root, pagenum_t page_number_to_free);
 
 
-/* Print */
+/*  Print */
 
 void enqueue(pagenum_t new_node_number, int level);
 pagenum_t dequeue();

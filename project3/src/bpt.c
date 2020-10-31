@@ -8,7 +8,7 @@
 #include <unistd.h>
 
 
-// Open a table
+// Open table
 int open_table(char* pathname) {
     if (pathname == NULL) {
         perror("Failed to get pathname");

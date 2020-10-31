@@ -151,7 +151,7 @@ buffer_t* find_buffer(int table_id, pagenum_t pagenum) {
     return temp;
 }
 
-// Read the buffer control block from buffer pool
+// Read buffer control block from buffer pool
 buffer_t* get_buffer(int table_id, pagenum_t pagenum) {
     buffer_t* temp = pool->next;
 

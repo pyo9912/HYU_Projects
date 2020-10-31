@@ -103,7 +103,7 @@ pagenum_t file_alloc_page(int table_id) {
 	page_t new_page;
 	memset(&new_page, 0, PAGESIZE);
 
-	// Get the free page number (offset)
+	// Get free page number (offset)
 	page_t header;
 	file_read_page(table_id, HEADER_NUM, &header);
 	go_to_free_page_number = ((header_page_t*)&header)->free_page_number;

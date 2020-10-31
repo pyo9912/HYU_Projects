@@ -1,6 +1,6 @@
 .SUFFIXES: .c .o
 
-CC=gcc
+CC = gcc
 
 SRCDIR=src/
 INC=include/

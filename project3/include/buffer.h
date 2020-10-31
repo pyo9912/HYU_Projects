@@ -17,7 +17,7 @@ void put_buffer(buffer_t* buffer);
 buffer_t* find_buffer(int table_id, pagenum_t pagenum);
 // Read the buffer control block from buffer pool
 buffer_t* get_buffer(int table_id, pagenum_t pagenum);
-// For allocation
+// For allocations
 buffer_t* new_buffer(int table_id);
 // For free
 void free_buffer(int table_id, buffer_t* buffer);

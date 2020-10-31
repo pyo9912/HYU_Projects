@@ -10,7 +10,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-/* file_API */
+/*  file_API */
 
 int file_open_table(char* pathname);
 

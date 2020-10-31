@@ -18,7 +18,7 @@
 typedef uint64_t pagenum_t;
 typedef uint64_t offset_t;
 
-/*structure definition*/
+/* structure definition */
 
 // Record structure (key+value)
 typedef struct record {
