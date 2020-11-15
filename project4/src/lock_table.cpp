@@ -11,7 +11,7 @@ using namespace std;
 
 class pairHash {
 	public:
-		size_t operator()(const pair<int,uint64_t>&k) const {
+		size_t operator()(const pair<int,int64_t>&k) const {
 			return k.first*1000+k.second;
 		}
 };
