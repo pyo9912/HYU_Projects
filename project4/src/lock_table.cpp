@@ -1,6 +1,10 @@
 #include <lock_table.h>
 #include <pthread.h>
 #include <iostream>
+#include <unistd.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <utility>
 #include <unordered_map>
 using namespace std;
@@ -28,7 +32,6 @@ lock_t*
 lock_acquire(int table_id, int64_t key)
 {
 	pthread_mutex_lock(&lock_table_latch);
-	//printf("acq %d %ld\n",table_id, key);
 	lock_t* lock = (lock_t*)malloc(sizeof(lock_t));
 
 	auto iter = table.find(make_pair(table_id, key));
@@ -92,7 +95,6 @@ int
 lock_release(lock_t* lock_obj)
 {
 	pthread_mutex_lock(&lock_table_latch);
-	//printf("rel %d %ld\n", lock_obj->sentinel->table_id, lock_obj->sentinel->record_id);
 	lock_entry_t* lock_entry = lock_obj->sentinel;
 	if (lock_obj->prev == NULL) {
 		// case: head point to lock_obj
@@ -108,7 +110,6 @@ lock_release(lock_t* lock_obj)
 			lock_entry->head = NULL;
 			lock_entry->tail = NULL;
 			free(lock_obj);
-			//pthread_cond_signal(&cond);
 		}
 	}
 	else {
