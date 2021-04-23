@@ -14,6 +14,16 @@ struct {
 
 static struct proc *initproc;
 
+double MLFQ_tickets = 100;      // Portion of MLFQ's CPU share
+double stride_tickets = 0;      // Portion of Stride's CPU share
+
+double MLFQ_stride = 0;              // Check the stride of scheduler
+double MLFQ_pass = 0;                // Check the pass of scheduler
+double stride_pass = 0;
+
+int boosting_ticks = 0;         // Check ticks for boosting in MLFQ
+int highestPriority = 0;        // Update the highestPriority;
+
 int nextpid = 1;
 extern void forkret(void);
 extern void trapret(void);
@@ -79,6 +89,9 @@ allocproc(void)
   acquire(&ptable.lock);
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
+    p->pass = 0;
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++)
     if(p->state == UNUSED)
       goto found;
 
@@ -88,6 +101,16 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  // Project1
+  // Init for MLFQ + stride scheduler
+  p->mode = 1;
+  p->level = 0;
+  p->priority = 0;
+  p->ticknum = 0;
+  p->portion = 0;
+  p->stride = 0;
+  p->pass = 0;
+  p->isYield = 0;
 
   release(&ptable.lock);
 
@@ -261,6 +284,11 @@ exit(void)
     }
   }
 
+  // Adjust the tickets and stride
+  MLFQ_tickets += curproc->portion;
+  stride_tickets -= curproc->portion;
+  MLFQ_stride = (double)(100/MLFQ_tickets);
+
   // Jump into the scheduler, never to return.
   curproc->state = ZOMBIE;
   sched();
@@ -319,39 +347,164 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+// Project1
+// Modify scheduler into MLFQ + Stride Scheduler 
+
+// Project 1
+// MLFQ Scheduling
+// The scheduler choose a next ready process form MLFQ.
+// Check the level in proc structure instead of making queue
+// RR policy quantum -> level 0: 1 tick / level 1: 2 ticks / level 2: 4 ticks
+// Time allotment -> level 0: 5 ticks / level 1: 10 ticks
+// Boosting to prevent starvation
+void
+MLFQ_scheduler(void)
+{
+  struct proc* p;
+  struct cpu* c = mycpu();
+
+  // Boosting
+  if (boosting_ticks >= BOOSTING_TICKS) {
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->state != RUNNABLE)
+        continue;
+
+      p->level = 0;
+      p->ticknum = 0;
+    }
+    boosting_ticks = 0;
+    highestPriority = 0;
+  }
+
+  int cur_level = 2;
+  int minPriority = 99999999;
+  struct proc* ret = 0;
+
+  // Get process by RR policy
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->state != RUNNABLE || p->mode != 1)
+      continue;
+
+    if (p->level < cur_level) {
+      cur_level = p->level;
+      minPriority = p->priority;
+      ret = p;
+    }
+    else if (p->level == cur_level && p->priority < minPriority) {
+      minPriority = p->priority;
+      ret = p;
+    }
+  }
+
+  if((p = ret)) {
+    c->proc = p;
+    switchuvm(p);
+    p->state = RUNNING;
+    p->isYield = 0;
+
+    swtch(&(c->scheduler), p->context);
+    switchkvm();
+
+    p->ticknum++;
+    boosting_ticks++;
+
+    c->proc = 0;
+
+    if (p->level == 0) {
+      if (p->ticknum >= MLFQ_ALLOTMENT_0) {
+        p->level++;
+        p->ticknum = 0;
+      }
+      else if (p->ticknum >= MLFQ_QUANTUM_0) {
+        p->priority = ++highestPriority;
+      }
+    }
+    else if (p->level == 1) {
+      if (p->ticknum >= MLFQ_ALLOTMENT_1) {
+        p->level++;
+        p->ticknum = 0;
+      }
+      else if (p->ticknum >= MFLQ_QUANTUM_1) {
+        p->priority = ++highestPriority;
+      }
+    }
+    else if (p->level == 2) {
+      if (p->ticknum >= MLFQ_QUANTUM_2) {
+        p->priority = ++highestPriority;
+      }
+    }
+  }
+  
+  MLFQ_pass += MLFQ_stride;
+}
+
+
+// Project1
+// Stride Scheduling
+// The scheduler choose the process which has the lowest pass value
+void
+stride_scheduler(void)
+{
+  struct proc* p;
+  struct cpu* c = mycpu();
+
+   c->proc = 0;
+
+  int i;
+  double min_pass_val = 99999999;
+  int min_pass_idx = 0;
+
+  // Loop to get the index of process which has lowest pass value
+  for (i=0; i<NPROC; i++) {
+      p = ptable.proc + i;
+      if (p->state != RUNNABLE)
+        continue;
+      if (p->mode != 0)
+        continue;
+      if (p->pass < min_pass_val) {
+        min_pass_val = p->pass;
+        min_pass_idx = i;
+      }
+  }
+
+  // Get the process which has lowest pass value
+  p = ptable.proc + min_pass_idx;
+
+  // Switch to chosen process.  It is the process's job
+  // to release ptable.lock and then reacquire it
+  // before jumping back to us.
+  c->proc = p;
+  switchuvm(p);
+  
+  p->pass += p->stride;
+  stride_pass += p->stride;
+  p->state = RUNNING;
+
+  swtch(&(c->scheduler), p->context);
+  switchkvm();
+
+  // Process is done running for now.
+  // It should have changed its p->state before coming back.
+  c->proc = 0;
+}
+
 void
 scheduler(void)
 {
-  struct proc *p;
-  struct cpu *c = mycpu();
-  c->proc = 0;
-  
   for(;;){
-    // Enable interrupts on this processor.
     sti();
 
-    // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state != RUNNABLE)
-        continue;
-
-      // Switch to chosen process.  It is the process's job
-      // to release ptable.lock and then reacquire it
-      // before jumping back to us.
-      c->proc = p;
-      switchuvm(p);
-      p->state = RUNNING;
-
-      swtch(&(c->scheduler), p->context);
-      switchkvm();
-
-      // Process is done running for now.
-      // It should have changed its p->state before coming back.
-      c->proc = 0;
+    if (MLFQ_tickets == 100) {
+      MLFQ_scheduler();
+    }
+    else if(MLFQ_tickets != 100 && MLFQ_pass <= stride_pass) {
+      MLFQ_scheduler();
+    }
+    else {
+      stride_scheduler();
     }
     release(&ptable.lock);
-
   }
 }
 
@@ -389,6 +542,13 @@ yield(void)
   myproc()->state = RUNNABLE;
   sched();
   release(&ptable.lock);
+}
+
+void
+self_yield(void)
+{
+  myproc()->isYield = 1;
+  yield();
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -533,8 +693,64 @@ procdump(void)
   }
 }
 
+// Lab Practice
 int
 getppid(void)
 {
   return myproc()->parent->pid;
+}
+
+// Project 1
+// Get the level of queue in MLFQ
+int
+getlev(void)
+{
+  struct proc* p = myproc();
+  
+  if (p == 0)
+    return -1;
+
+  return p->level;
+}
+
+// Project 1
+// Inquires to obtain CPU share percent
+// Set the amount of CPU share for stride scheduling
+int
+set_cpu_share(int n)
+{
+  struct proc* p;
+  struct proc* curproc = myproc();
+  
+  // Make sure that MLFQ occupy at least 20% of CPU share
+  // Limit stride share occupy at most 80% of CPU share
+  if (MLFQ_tickets - n < 20)
+    return -1;
+
+  // Update values in process
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->pid == curproc->pid) {
+      p->mode = 0;        // mode: init as stride scheduling
+      p->level = -1;      // level: init as stride scheduling
+      p->priority = 0;    
+      p->ticknum = 0;
+      p->portion = (double) n;
+      p->stride = (double) 100 / n;
+      p->pass = 0;
+      p->isYield = 0;
+    }
+  }
+
+  // Update CPU tickets
+  MLFQ_tickets -= n;
+  stride_tickets += n;
+
+  MLFQ_stride = (double)(100/MLFQ_tickets);
+  MLFQ_pass = 0;
+  stride_pass = 0;
+
+  release(&ptable.lock);
+
+  return 0;
 }

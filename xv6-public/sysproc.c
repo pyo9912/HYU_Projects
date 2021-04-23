@@ -96,9 +96,31 @@ sys_uptime(void)
   return xticks;
 }
 
+// Syscall in Project 1
 int
 sys_yield(void)
 {
-  yield();
+  self_yield();
   return 0;
 }
+
+// Syscall in Project 1
+int
+sys_getlev(void)
+{
+  return getlev();
+}
+
+// Syscall in Project 1
+// Wrapper function for set_cpu_share(int)
+int
+sys_set_cpu_share(void)
+{
+  int n;
+
+  if (argint(0, &n) < 0)
+    return -1;
+
+  return set_cpu_share(n);
+}
+

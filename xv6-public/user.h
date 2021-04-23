@@ -25,7 +25,9 @@ int sleep(int);
 int uptime(void);
 int myfunction(char*);
 int getppid(void);
-int yield(void);
+int yield(void);            // Project 1
+int getlev(void);           // Project 1
+int set_cpu_share(int);     // Project 1
 
 // ulib.c
 int stat(const char*, struct stat*);

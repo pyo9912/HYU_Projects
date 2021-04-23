@@ -34,6 +34,17 @@ struct context {
 
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+// Quantum constant in MLFQ 3-level queue
+#define MLFQ_QUANTUM_0 1
+#define MFLQ_QUANTUM_1 2
+#define MLFQ_QUANTUM_2 4
+// Allotment constant in MLFQ 3-level queue
+#define MLFQ_ALLOTMENT_0 5
+#define MLFQ_ALLOTMENT_1 10
+// Boosting constant in MLFQ 3-level queue
+#define BOOSTING_TICKS 100
+
+
 // Per-process state
 struct proc {
   uint sz;                     // Size of process memory (bytes)
@@ -49,6 +60,18 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+
+  // Project 1
+  // Elements for Scheduler
+  int mode;                    // MLFQ: 1, Stride: 0
+  int level;                   // MLFQ: 0~2, Stride: -1
+  int priority;                // Check the priority of process in queue
+  uint ticknum;                // Check ticknum in MLFQ scheduling
+  int portion;                 // CPU share portion, MLFQ: 0
+  double tickets;              // The number of tickets for this process
+  double stride;               // Stride of this process
+  double pass;                 // Counter for stride scheduling
+  int isYield;                 // Flag for checking yield() call
 };
 
 // Process memory is laid out contiguously, low addresses first:

@@ -119,8 +119,11 @@ void            sleep(void*, struct spinlock*);
 void            userinit(void);
 int             wait(void);
 void            wakeup(void*);
-void            yield(void);
+void            yield(void);            // Project 1
+void            self_yield(void);       // Project 1
 int             getppid(void);
+int             getlev(void);           // Project 1
+int             set_cpu_share(int);     // Project 1
 
 // swtch.S
 void            swtch(struct context**, struct context*);
