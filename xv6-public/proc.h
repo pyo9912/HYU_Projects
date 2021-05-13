@@ -72,6 +72,14 @@ struct proc {
   double stride;               // Stride of this process
   double pass;                 // Counter for stride scheduling
   int isYield;                 // Flag for checking yield() call
+
+  // Project 2
+  // Elements for LWP
+  int tid;                     // Thread ID master thread: 0, worker thread: positive int
+  int num_thread;              // Number of worker thread, worker thread: 0
+  uint base;                   // Base of virtual address
+  struct proc *master;         // Master thread of this process
+  void *ret_val;               // return value in thread_exit(), thread_join()
 };
 
 // Process memory is laid out contiguously, low addresses first:

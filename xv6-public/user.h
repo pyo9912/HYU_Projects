@@ -28,6 +28,9 @@ int getppid(void);
 int yield(void);            // Project 1
 int getlev(void);           // Project 1
 int set_cpu_share(int);     // Project 1
+int thread_create(thread_t* thread, void* (*start_routine)(void*), void* arg);  // Project 2
+void thread_exit(void *retval);                      // Project 2
+int thread_join(thread_t thread, void **retval);     // Project 2
 
 // ulib.c
 int stat(const char*, struct stat*);

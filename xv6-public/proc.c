@@ -24,7 +24,8 @@ double stride_pass = 0;
 int boosting_ticks = 0;         // Check ticks for boosting in MLFQ
 int highestPriority = 0;        // Update the highestPriority;
 
-int nextpid = 1;
+int nextpid = 1;                // use for process management
+int nexttid = 1;                // use for thread management
 extern void forkret(void);
 extern void trapret(void);
 
@@ -111,6 +112,9 @@ found:
   p->stride = 0;
   p->pass = 0;
   p->isYield = 0;
+  // Project2
+  p->tid = 0;
+  p->master = 0;
 
   release(&ptable.lock);
 
@@ -753,4 +757,177 @@ set_cpu_share(int n)
   release(&ptable.lock);
 
   return 0;
+}
+
+// Project2
+// Provide a method to create threads within the process.
+int
+thread_create(thread_t* thread, void* (*start_routine)(void*), void* arg)
+{
+  int i;
+  struct proc* np;
+  struct proc* curproc = myproc();
+  pde_t* pgdir;
+  uint sz, sp, ustack[2], base;
+  // Allocate process
+  if ((np = allocproc()) == 0) {
+    return -1;
+  }
+
+  --nextpid;
+  // Set thread elements
+  np->pgdir = curproc->pgdir;
+  np->pid = curproc->pid;
+  np->parent = curproc->parent;
+  np->tid = nexttid++;
+  *np->tf = *curproc->tf;
+  if (curproc->tid == 0) {
+    // Case: curproc is a master thread
+    np->master = curproc;
+  }
+  else {
+    // Case: curproc is a worker thread
+    np->master = curproc->master;
+  }
+  np->master->num_thread++;
+  pgdir = np->master->pgdir;
+  // Copy master thread's data as fork() does
+  for (i = 0; i < NOFILE; i++) {
+    if (curproc->ofile[i]) {
+      np->ofile[i] = filedup(curproc->ofile[i]);
+    }
+  }
+  np->cwd = idup(curproc->cwd);
+
+  safestrcpy(np->name, curproc->name, sizeof(curproc->name));
+  // Return thread id
+  *thread = np->tid;
+
+  // Allocate user stack
+  base = np->master->sz;
+  np->master->sz += 2*PGSIZE;
+
+  if ((sz = allocuvm(pgdir, base, base + 2*PGSIZE)) == 0) {
+    np->state = UNUSED;
+    return -1;
+  }
+
+  sp = sz;
+
+  ustack[0] = 0xFFFFFFFF;
+  ustack[1] = (uint)arg;
+  sp -= 8;
+
+  if (copyout(np->pgdir, sp, ustack, 8) < 0) {
+    return -1;
+  }
+  np->sz = sz;
+  // Set start_routine
+  np->tf->eip = (uint)start_routine;
+  // Set stack pointer
+  np->tf->esp = sp;
+
+  np->state = RUNNABLE;
+
+  // Return 0 if success
+  return 0;
+}
+
+// Project2
+// Terminate the thread.
+// Return the result of a thread
+// Struct is similar to exit function
+void
+thread_exit(void *retval)
+{
+  int i;
+  struct proc* p;
+  struct proc* curproc = myproc();
+
+  // Close all open files
+  for (i = 0; i < NOFILE; i++) {
+    if (curproc->ofile[i]) {
+      fileclose(curproc->ofile[i]);
+      curproc->ofile[i] = 0;
+    }
+  }
+
+  begin_op();
+  iput(curproc->cwd);
+  end_op();
+  curproc->cwd = 0;
+
+  acquire(&ptable.lock);
+  
+  // Check master thread and wake it up
+  wakeup1(curproc->master);
+
+  // Update scheduling elements
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    
+  }
+
+  // Jump to scheduler, never to return
+  curproc->ret_val = retval;
+  curproc->state = ZOMBIE;
+  sched();
+  panic("zombie exit");
+
+}
+
+// Project2
+// Wait for the thread specified by the argument to terminate
+// If the tread has already terminated, it returns immediately
+// In join, clean up resources allocated to the thread
+// e.g. page table, allocated memories, stacks
+int
+thread_join(thread_t thread, void **retval)
+{
+  struct proc* p;
+  struct proc* curproc = myproc();
+
+  // Only for master thread
+  if (curproc->master != 0) {
+    return -1;
+  }
+
+  acquire(&ptable.lock);
+
+  for (;;) {
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->tid != thread) {
+        continue;
+      }
+
+      if (p->master != curproc) {
+        release(&ptable.lock);
+        return -1;
+      }
+
+      if (p->state == ZOMBIE) {
+        *retval = p->ret_val;
+        
+        // Clean up thread
+        kfree(p->kstack);
+        p->kstack = 0;
+        p->pid = 0;
+        p->parent = 0;
+        p->name[0] = 0;
+        p->killed = 0;
+        p->master = 0;
+        p->state = UNUSED;
+
+        release(&ptable.lock);
+        return 0;
+      }
+    }
+
+    if (curproc->killed) {
+      release(&ptable.lock);
+      return -1;
+    }
+
+    // Wait for worker thread to exit
+    sleep(curproc, &ptable.lock);
+  }
 }
