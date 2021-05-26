@@ -35,15 +35,15 @@ struct context {
 enum procstate { UNUSED, EMBRYO, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Quantum constant in MLFQ 3-level queue
-#define MLFQ_QUANTUM_0 1
-#define MFLQ_QUANTUM_1 2
-#define MLFQ_QUANTUM_2 4
+#define MLFQ_QUANTUM_0 5
+#define MFLQ_QUANTUM_1 10
+#define MLFQ_QUANTUM_2 20
 // Allotment constant in MLFQ 3-level queue
-#define MLFQ_ALLOTMENT_0 5
-#define MLFQ_ALLOTMENT_1 10
+#define MLFQ_ALLOTMENT_0 20
+#define MLFQ_ALLOTMENT_1 40
 // Boosting constant in MLFQ 3-level queue
-#define BOOSTING_TICKS 100
-
+#define BOOSTING_TICKS 200
+// Updated values in project2
 
 // Per-process state
 struct proc {

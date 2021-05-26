@@ -49,32 +49,40 @@ int (*testfunc[NTEST])(void) = {
   basictest,
   jointest1,
   jointest2,
-  stresstest,
-  exittest1,
-  exittest2,
   forktest,
-  exectest,
-  sbrktest,
-  killtest,
   pipetest,
+  
+  exectest,
+  exittest1,
   sleeptest,
   stridetest,
+  sbrktest,
+  killtest,
+  
+  exittest2,
+  
+  
+  stresstest,
 };
 char *testname[NTEST] = {
   "racingtest",
   "basictest",
   "jointest1",
   "jointest2",
-  "stresstest",
-  "exittest1",
-  "exittest2",
   "forktest",
-  "exectest",
-  "sbrktest",
-  "killtest",
   "pipetest",
+  
+  "exectest",
+  "exittest1",
   "sleeptest",
   "stridetest",
+  "sbrktest",
+  "killtest",
+  
+  "exittest2",
+  
+  
+  "stresstest",
 };
 
 int

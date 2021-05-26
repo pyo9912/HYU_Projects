@@ -186,6 +186,7 @@ int
 growproc(int n)
 {
   uint sz;
+  struct proc * p;
   struct proc *curproc = myproc();
 
   sz = curproc->sz;
@@ -196,7 +197,13 @@ growproc(int n)
     if((sz = deallocuvm(curproc->pgdir, sz, sz + n)) == 0)
       return -1;
   }
-  curproc->sz = sz;
+  acquire(&ptable.lock);
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->pid == curproc->pid) {
+      p->sz = sz;
+    }
+  }
+  release(&ptable.lock);
   switchuvm(curproc);
   return 0;
 }
@@ -216,8 +223,16 @@ fork(void)
     return -1;
   }
 
+  // Set pgdir
+  if (curproc->tid == 0) {
+    np->pgdir = copyuvm(curproc->pgdir, curproc->sz);
+  }
+  else {
+    np->pgdir = copyuvm(curproc->pgdir, curproc->master->sz);
+  }
+
   // Copy process state from proc.
-  if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
+  if(np->pgdir == 0){
     kfree(np->kstack);
     np->kstack = 0;
     np->state = UNUSED;
@@ -262,17 +277,22 @@ exit(void)
     panic("init exiting");
 
   // Close all open files.
-  for(fd = 0; fd < NOFILE; fd++){
-    if(curproc->ofile[fd]){
-      fileclose(curproc->ofile[fd]);
-      curproc->ofile[fd] = 0;
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+    if (p->pid == curproc->pid) {
+      for(fd = 0; fd < NOFILE; fd++){
+        if(curproc->ofile[fd]){
+          fileclose(curproc->ofile[fd]);
+          curproc->ofile[fd] = 0;
+        }
+      }
+
+      begin_op();
+      iput(curproc->cwd);
+      end_op();
+      curproc->cwd = 0;
     }
   }
-
-  begin_op();
-  iput(curproc->cwd);
-  end_op();
-  curproc->cwd = 0;
+  
 
   acquire(&ptable.lock);
 
@@ -647,7 +667,7 @@ kill(int pid)
 
   acquire(&ptable.lock);
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if(p->pid == pid){
+    if(p->pid == pid && p->tid == 0){
       p->killed = 1;
       // Wake process from sleep if necessary.
       if(p->state == SLEEPING)
@@ -765,6 +785,7 @@ int
 thread_create(thread_t* thread, void* (*start_routine)(void*), void* arg)
 {
   int i;
+  struct proc* p;
   struct proc* np;
   struct proc* curproc = myproc();
   pde_t* pgdir;
@@ -827,7 +848,28 @@ thread_create(thread_t* thread, void* (*start_routine)(void*), void* arg)
   // Set stack pointer
   np->tf->esp = sp;
 
+  // Adjust scheduler elements
+  acquire(&ptable.lock);
+  if (curproc->portion != 0) {
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      if (p->pid == curproc->pid) {
+        // Init element as stride (default)
+        p->mode = 0;
+        p->level = -1;
+        p->portion = curproc->portion;
+        p->tickets = curproc->tickets / (double)(curproc->num_thread + 1);
+        p->stride = (double)100 / p->tickets;
+      }
+    }
+    for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+      p->pass = 0;
+    }
+    // Init pass value
+    MLFQ_pass = 0;
+    stride_pass = 0;
+  }
   np->state = RUNNABLE;
+  release(&ptable.lock);
 
   // Return 0 if success
   return 0;
@@ -864,7 +906,14 @@ thread_exit(void *retval)
 
   // Update scheduling elements
   for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
-    
+    if (curproc->tickets != 0) {
+      for (p = ptable.proc; p < &ptable.proc[NPROC]; p++) {
+        if (p->pid == curproc->pid && p->tid == curproc->tid) {
+          p->tickets = curproc->tickets / (double)(curproc->master->num_thread+1);
+          p->stride = (double)(100/p->tickets);
+        }
+      }
+    }
   }
 
   // Jump to scheduler, never to return

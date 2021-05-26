@@ -93,6 +93,14 @@ exec(char *path, char **argv)
       last = s+1;
   safestrcpy(curproc->name, last, sizeof(curproc->name));
 
+  // Case: worker thread calls exec()
+  // Change it into master thread
+  if (curproc->tid != 0) {
+    curproc->tid = 0;
+    curproc->parent = curproc->master->parent;
+    curproc->master = 0;
+  }
+
   // Commit to the user image.
   oldpgdir = curproc->pgdir;
   curproc->pgdir = pgdir;
