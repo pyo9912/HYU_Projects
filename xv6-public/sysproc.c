@@ -188,3 +188,10 @@ sys_thread_join(void)
 
   return thread_join(thread, ret_val);
 }
+
+// Syscall in Project 3
+int
+sys_sync(void)
+{
+  return sync();
+}

@@ -111,6 +111,7 @@ extern int sys_set_cpu_share(void);   // Project 1
 extern int sys_thread_create(void);   // Project 2
 extern int sys_thread_exit(void);     // Project 2
 extern int sys_thread_join(void);     // Project 2
+extern int sys_sync(void);            // Project 3
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -142,6 +143,7 @@ static int (*syscalls[])(void) = {
 [SYS_thread_create] sys_thread_create,
 [SYS_thread_exit]   sys_thread_exit,
 [SYS_thread_join]   sys_thread_join,
+[SYS_sync]          sys_sync,
 };
 
 void

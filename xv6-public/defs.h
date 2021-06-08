@@ -86,6 +86,8 @@ void            initlog(int dev);
 void            log_write(struct buf*);
 void            begin_op();
 void            end_op();
+int             sync(void);             // Project 3
+int             get_log_num(void);      // Project 3
 
 // mp.c
 extern int      ismp;

@@ -44,6 +44,7 @@ struct log {
   int committing;  // in commit(), please wait.
   int dev;
   struct logheader lh;
+  int sync_flag; // check if log struct is sync channel
 };
 struct log log;
 
@@ -154,6 +155,7 @@ end_op(void)
   if(log.outstanding == 0){
     do_commit = 1;
     log.committing = 1;
+    wakeup(&log.sync_flag);
   } else {
     // begin_op() may be waiting for log space,
     // and decrementing log.outstanding has decreased
@@ -165,11 +167,12 @@ end_op(void)
   if(do_commit){
     // call commit w/o holding locks, since not allowed
     // to sleep with locks.
-    commit();
-    acquire(&log.lock);
-    log.committing = 0;
-    wakeup(&log);
-    release(&log.lock);
+    // commit();
+    // acquire(&log.lock);
+    // log.committing = 0;
+    // wakeup(&log);
+    // release(&log.lock);
+    sync();
   }
 }
 
@@ -232,3 +235,36 @@ log_write(struct buf *b)
   release(&log.lock);
 }
 
+// Project 3
+// Add sync system call
+// Flush all data in the buffer cache to the disk
+int
+sync(void)
+{
+  if (log.lh.n > 0) {
+    acquire(&log.lock);
+    // make sure check committing and outstanding in atomic step
+    log.committing = 1;
+    // modify log.committing value
+    while(log.outstanding) {
+      // wait if outstanding is 0
+      sleep(&log.sync_flag, &log.lock);
+    }
+    release(&log.lock);
+    commit();
+    acquire(&log.lock);
+    log.committing = 0;
+    wakeup(&log);
+    release(&log.lock);
+    return 0;
+  }
+  return -1;
+}
+
+// Project 3
+// return log.lh.n value
+int
+get_log_num(void)
+{
+  return log.lh.n;
+}
