@@ -247,7 +247,7 @@ sync(void)
     log.committing = 1;
     // modify log.committing value
     while(log.outstanding) {
-      // wait if outstanding is 0
+      // wait if outstanding is not 0
       sleep(&log.sync_flag, &log.lock);
     }
     release(&log.lock);
