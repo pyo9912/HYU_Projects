@@ -17,6 +17,3 @@ Modified in SimpleScene.py
 
 
 
-
-
-
