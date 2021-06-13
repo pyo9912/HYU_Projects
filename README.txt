@@ -20,9 +20,3 @@ Modified in SimpleScene.py
 
 
 
-
-
-
-
-
-
