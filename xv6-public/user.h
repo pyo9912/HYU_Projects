@@ -33,6 +33,8 @@ void thread_exit(void *retval);                      // Project 2
 int thread_join(thread_t thread, void **retval);     // Project 2
 int sync(void);         // Project 3
 int get_log_num(void);  // Project 3
+int pread(int, void*, int, int);        // Project 3
+int pwrite(int, const void*, int, int); // Project 3
 
 // ulib.c
 int stat(const char*, struct stat*);

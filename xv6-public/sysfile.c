@@ -442,3 +442,30 @@ sys_pipe(void)
   fd[1] = fd1;
   return 0;
 }
+
+// Project 3
+// Add pread, pwrite system call
+// Work as sys_read, sys_write
+int
+sys_pread(void)
+{
+  struct file *f;
+  int n, off;
+  char *p;
+
+  if (argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0 || argint(3, &off) < 0)
+    return -1;
+  return pread(f, p , n, off);
+}
+
+int
+sys_pwrite(void)
+{
+  struct file *f;
+  int n, off;
+  char *p;
+
+  if (argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0 || argint(3, &off) < 0)
+    return -1;
+  return pwrite(f,p, n, off);
+}
