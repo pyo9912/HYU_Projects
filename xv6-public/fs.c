@@ -397,7 +397,7 @@ bmap(struct inode *ip, uint bn)
     return addr;
   }
   // Project 3 update bmap function
-  bn -= NINDIRECT;
+  // bn -= NINDIRECT;
 
   if (bn < NDINDIRECT) {
     // Load doubly indirect block, allocating if necessary.
@@ -422,7 +422,7 @@ bmap(struct inode *ip, uint bn)
     brelse(bp);
     return addr;
   }
-  bp -= NDINDIRECT;
+  // bn -= NDINDIRECT;
 
   if (bn < NTINDIRECT) {
     // Load triple indirect block, allocating if necessary.
