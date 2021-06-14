@@ -112,6 +112,7 @@ extern int sys_thread_create(void);   // Project 2
 extern int sys_thread_exit(void);     // Project 2
 extern int sys_thread_join(void);     // Project 2
 extern int sys_sync(void);            // Project 3
+extern int sys_get_log_num(void);     // Project 3
 
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -144,6 +145,7 @@ static int (*syscalls[])(void) = {
 [SYS_thread_exit]   sys_thread_exit,
 [SYS_thread_join]   sys_thread_join,
 [SYS_sync]          sys_sync,
+[SYS_get_log_num]   sys_get_log_num,
 };
 
 void

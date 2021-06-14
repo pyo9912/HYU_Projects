@@ -49,7 +49,10 @@ struct log {
 struct log log;
 
 static void recover_from_log(void);
-static void commit();
+int sync();
+static void write_log();
+static void write_head();
+// static void commit();
 
 void
 initlog(int dev)
