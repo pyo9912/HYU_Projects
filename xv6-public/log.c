@@ -49,10 +49,10 @@ struct log {
 struct log log;
 
 static void recover_from_log(void);
-int sync();
-static void write_log();
-static void write_head();
-// static void commit();
+//int sync();
+//static void write_log();
+//static void write_head();
+static void commit();
 
 void
 initlog(int dev)
@@ -158,7 +158,7 @@ end_op(void)
   if(log.outstanding == 0){
     do_commit = 1;
     log.committing = 1;
-    wakeup(&log.sync_flag);
+    // wakeup(&log.sync_flag);
   } else {
     // begin_op() may be waiting for log space,
     // and decrementing log.outstanding has decreased
@@ -170,11 +170,11 @@ end_op(void)
   if(do_commit){
     // call commit w/o holding locks, since not allowed
     // to sleep with locks.
-    // commit();
-    // acquire(&log.lock);
-    // log.committing = 0;
-    // wakeup(&log);
-    // release(&log.lock);
+    commit();
+    acquire(&log.lock);
+    log.committing = 0;
+    wakeup(&log);
+    release(&log.lock);
     sync();
   }
 }
