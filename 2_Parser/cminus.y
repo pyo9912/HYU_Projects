@@ -49,9 +49,11 @@ decl_list   : decl_list decl
 decl        : var_decl { $$ = $1; }
             | fun_decl { $$ = $1; }
             ;
-identifier  : ID { savedName = copyString(tokenString); }
+identifier  : ID { savedName = copyString(tokenString);
+                   savedLineNo = lineno; }
             ;
-number      : NUM { savedNum = atoi(tokenString); }
+number      : NUM { savedNum = atoi(tokenString); 
+                    savedLineNo = lineno; }
             ;
 type_spec   : INT { 
                 $$ = newDeclNode(TypeK);
@@ -66,17 +68,20 @@ var_decl    : type_spec identifier SEMI {
                 $$ = newDeclNode(VarK);
                 $$->child[0] = $1;
                 $$->attr.name = savedName;
+                $$->lineno = lineno;
             }
             | type_spec identifier LBRACE number RBRACE SEMI
             {
                 $$ = newDeclNode(ArrVarK);
                 $$->attr.name = savedName;
                 $$->child[0] = $1;
+                $$->lineno = lineno;
             }
             ;
 fun_decl    : type_spec identifier {
                 $$ = newDeclNode(FunK);
                 $$->attr.name = savedName;
+                $$->lineno = lineno;
             }
             LPAREN params RPAREN comp_stmt {
                 $$ = $3;
